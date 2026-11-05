@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Docs: `Effect::Cd` is never typed into the shell; without a shell integration the host shows a notice.
+
 ## [0.1.0] - 2026-11-05
 
 ### Added
