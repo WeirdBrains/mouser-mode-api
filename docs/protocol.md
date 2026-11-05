@@ -245,4 +245,4 @@ trying. The plugin stays off, and the status bar shows it with a restart
 button, which starts the count again. Set it with `plugins.max_restarts` in preferences. Your shells keep running throughout,
 because they live in the session server, not in the plugin.
 
-See also: [Modes](./modes.md), [Plugins](./plugins.md).
+See also: [Modes](https://github.com/WeirdBrains/mouser/blob/main/docs/modes.md), [Plugins](https://github.com/WeirdBrains/mouser/blob/main/docs/plugins.md).
