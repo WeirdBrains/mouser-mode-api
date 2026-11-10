@@ -62,7 +62,12 @@ declared in `plugin.toml` and granted:
 | `fetch {url, method, headers, body, max_bytes}` | `net.fetch` | one HTTP(S) request made by Mouser: `status`, `headers`, `text` (or `bytes`), `truncated`. 4 MiB by default, 16 MiB at most |
 | `remote.location`, `remote.list {path}`, `remote.read {path, offset, len}` | `remote.read` | the shell's ssh host, over its connection (1 MiB per read); `shell.remote_changed` events too |
 | `agent.models`, `agent.set_default {model}` | `agent.use` | providers, their models and the default. Never a key |
-| `agent.send {text}`, `agent.cancel`, `agent.clear`, `agent.state` | `agent.use` | an agent session that runs inside Mouser with your models, keys and tools. Replies stream to the plugin as `agent.state` events: `entries` (`user`, `assistant`, `tool`, `note`, `error`), `running`, `model`, `card_open`. Tool-call cards are drawn by Mouser, never by the plugin |
+
+When a service needs a capability the manifest declares and the store is still **Ask**, Mouser shows the approval popup and retries the call after Allow always — it does not return `… is not allowed` until the user picks Never (or Deny for that attempt).
+| `agent.send {text}`, `agent.cancel`, `agent.clear`, `agent.state` | `agent.use` | an agent session that runs inside Mouser with your models, keys and tools. Replies stream to the plugin as `agent.state` events: `entries` (`user`, `assistant`, `tool`, `note`, `error`), `running`, `model`, `card_open`, `allow_all`. Tool-call cards are drawn by Mouser, never by the plugin (Allow / Allow all / Deny) |
+| `agent.revoke_all` | `agent.use` | turn the session's Allow all off. Only the user turns it on, in Mouser's card |
+| `models.hf_search {query}`, `models.hf_details {id}` | `agent.use` | Hugging Face GGUF models: `[{id, downloads, likes, pipeline, updated}]`; one model's card summary, numbers, license, `lines`, `quants` (`label`, `size`, `human`, `files`, `installed`, `spec`) and `default_quant` |
+| `models.hf_install {id, quant}`, `models.hf_cancel` | `agent.use` | Mouser re-reads the model from the Hub, asks you in its own popup (size, license, folder), then downloads it: `{"started": true}` or `{"decision": "deny"}`. Progress comes as `models.download` events (`repo`, `quant`, `done`, `total`, `state`: downloading / done / cancelled / failed, `spec`, `error`); when done it is the default model. One download at a time |
 
 Mouser's popups name the plugin that asks. They take every key and click while
 open, and their buttons do nothing for the first 400 ms, so a plugin (or the
@@ -96,6 +101,14 @@ Each message is a 4-byte little-endian length followed by the message body.
 The body is MessagePack by default. Set `MOUSER_MODE_WIRE=json` to use JSON
 instead, which makes plugins easy to write and debug in any language. Frames
 over 64 MiB are refused.
+
+In MessagePack, Mouser writes its messages (`Welcome`, events, responses,
+`Stopping`) with structs as **maps keyed by field name**, so a plugin built
+against an older mode-api skips a field added since then (`Context.reduce_motion`
+in 1.4.5, say) instead of failing to decode. A plugin may send its own
+messages with structs as arrays (the mode-api default) or as maps; Mouser reads
+both. A MessagePack decoder in another language should accept both shapes and
+ignore unknown keys.
 
 ## Handshake and versions
 
@@ -171,6 +184,10 @@ height the user chose for the mode's dock (dragging its bottom edge, the
 host's taller / shorter keys `]` / `[`, or its fullscreen toggle `F`); it comes
 again whenever that changes. Lay the dock out with `DockSize::height(area,
 cell_h, your_default)`. A mode that ignores it keeps its own height.
+It also carries `reduce_motion` (from `appearance.reduce_motion` in
+preferences.toml, default false) when the host supports it: skip motion such as
+an open/close transition. Older hosts omit the field; treat a missing value as
+false. The same flag is on handshake `Accepted.ctx` (`Context.reduce_motion`).
 
 A right-click in the view, or the host's menu key `.` while the mode has the
 keyboard, sends `menu.open` (`{"x", "y", "keyboard": bool}`; for the keyboard,
@@ -188,6 +205,35 @@ Mouser fills in each entry's `key` from the user's `modes.toml` when the entry's
 now. `Host::menu(x, y, entries)` sends it from `serve()`. `ClipboardSet` puts text
 on the clipboard with no permission (for "copy path" and the like); reading the
 clipboard is not offered.
+
+### Frames and bubbles (mouser-mode-api 0.3, api 1)
+
+Two panel styles draw a chat the way grokbot-tui does, with rounded corners:
+`Frame { focused }` is a rounded outline whose item text is a title set into
+its top edge (in the accent colour when `focused`), with nothing filled, so the
+items after it show inside; `Bubble { mine }` is a rounded message background
+behind the rows drawn after it (`mine` tints it with the accent). A dock item
+whose action is `mouser.dock_full` toggles the host's fullscreen for the mode
+panel, like its ⤢ button and `F`. Mouser draws them from 1.5; an older Mouser
+can't read a view that uses them.
+
+#### Over MCP
+
+The same `menu.open` (with `"keyboard": true`, for the selected item) also
+answers MCP clients. Mouser's `mode_actions` tool sends it, takes your `Menu`
+answer without drawing it, and lists the entries; `mode_action` then sends the
+chosen `ui.action`, exactly as a picked row would (docs/mcp.md §Mode actions).
+Only ids from your bindings or from that answer are accepted, and disabled
+entries are refused. So a mode is scriptable over MCP once it answers
+`menu.open`:
+
+- Make every entry right for the selected item and the view state.
+- Keep destructive changes behind your own confirmation (a `Prompt`, or the
+  host's approval card), because an MCP client may pick them; Mouser asks the
+  user once (`modes.control`) before it sends the action, not instead of you.
+- Answer within 3 s, or the client is told you have no actions.
+- Entry ids containing `delete`, `trash`, `move`, `rename`, `paste` or `cut`
+  are flagged `destructive` to the client.
 
 ## Host calls
 
@@ -237,6 +283,10 @@ Measured with the test plugin (`mouser-mode-echo`), 1080p RGBA at 60 fps for
 | Windows, inline | 0 of 600 | 7.7 / 10.3 ms | 1.6 ms |
 | macOS (Apple silicon), shared memory | 0 of 600 | 0.8 / 1.6 ms | 0.9 ms |
 | macOS (Apple silicon), inline | 0 of 600 | 3.5 / 4.7 ms | 0.5 ms |
+
+Commander's and chat's players come from the `mouser-media` crate, which
+follows these rules (two slots, skip rather than queue); see
+[Building a mode §Views and media](https://github.com/WeirdBrains/mouser/blob/main/docs/building-modes.md#views-and-media).
 
 A key press takes 8 µs (Linux), 26 µs (Windows) or 5 µs (macOS) to reach the
 plugin and come back. Run the benchmark with

@@ -17,6 +17,7 @@
 //! third-party mode.
 
 pub mod codec;
+pub mod complete;
 pub mod events;
 #[cfg(feature = "markdown")]
 pub mod highlight;
@@ -35,4 +36,4 @@ pub mod ui;
 pub use mode::{Context, Effect};
 pub use protocol::{API_VERSION, ApiRange};
 pub use serve::{Host, Mode, serve};
-pub use ui::{Action, DockSize, MenuEntry, Panel, PanelItem, PanelStyle, Rect, Viewport};
+pub use ui::{Action, DockSize, MenuEntry, Panel, PanelItem, PanelStyle, Rect, Viewport, dock_chrome_height};

@@ -52,6 +52,9 @@ pub enum PanelStyle {
     },
     /// Background of a dropdown drawn over the panel.
     Popup,
+    /// A veil over the rect (`0` clear … `255` opaque black) for motion such as
+    /// the fullscreen viewer backdrop.
+    Dim(u8),
     /// Name tag drawn on top of everything, previews included (commander
     /// carousel): a slightly transparent rounded box with a soft shadow.
     FloatLabel,
@@ -76,6 +79,18 @@ pub enum PanelStyle {
         selected: bool,
         highlight: u64,
     },
+    /// Font picker row: `text` is the family name and is drawn in that face.
+    FontOption {
+        selected: bool,
+        highlight: u64,
+    },
+    /// Mini terminal sample for live theme edits (side preview).
+    ThemePreview {
+        fg: u32,
+        bg: u32,
+        cursor: u32,
+        accent: u32,
+    },
     /// A markdown text run (`mouser_core::markdown` span flags; `heading`
     /// level, 0 for body text).
     Md {
@@ -94,6 +109,17 @@ pub enum PanelStyle {
     MdQuote,
     /// Markdown thematic break.
     MdRule,
+    /// A rounded outline box (the chat's frames, like grokbot-tui's): the
+    /// item's text is a title set into the top edge; `focused` draws it in the
+    /// accent. Nothing is filled, so items drawn after it show inside.
+    Frame {
+        focused: bool,
+    },
+    /// A rounded message bubble behind the rows drawn after it; `mine`
+    /// tints it with the accent (your messages).
+    Bubble {
+        mine: bool,
+    },
 }
 
 /// What clicking a panel item a mode drew does. Mouser's own windows use a
@@ -150,6 +176,13 @@ pub struct DockSize {
     pub full: bool,
 }
 
+/// Height of the host chrome at the bottom of a mode dock (the ⤢ fullscreen
+/// button and the focus hint). Keep footers and the input line above this
+/// strip so they are not covered.
+pub fn dock_chrome_height(cell_h: i32) -> i32 {
+    cell_h + 10
+}
+
 impl DockSize {
     /// The dock height for `area`: the whole area when full, else the chosen
     /// share, else `default_h`; at least four rows and leaving two for the shell.
@@ -200,5 +233,6 @@ mod dock_tests {
         let p = serde_json::json!({"dock": {"permille": 500, "full": false}});
         assert_eq!(DockSize::from_payload(&p).permille, Some(500));
         assert_eq!(DockSize::from_payload(&serde_json::json!({})), DockSize::default(), "an older host");
+        assert_eq!(dock_chrome_height(18), 28);
     }
 }

@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-10
+
+### Added
+
+- `PanelStyle::Frame { focused }` (a rounded outline with its title in the top edge) and `PanelStyle::Bubble { mine }` (a rounded message background); a dock item with the action `mouser.dock_full` toggles the host's fullscreen panel. Mouser draws them from 1.5.
+- `complete`: Tab completion for text fields (paths relative to a folder with `~`, commands then arguments, known values), with `PathSource` for remote listings.
+- `Context.reduce_motion` (default false when the host omits it), `dock_chrome_height` (keep footers above the host's dock chrome), `services::permission_for` (the capability a host service needs), and `codec::write_named` (structs as MessagePack maps keyed by field name, what Mouser sends).
+- Panel styles Mouser already drew for its own modes: `Dim(u8)` (a veil and click target), `FontOption`, `ThemePreview`.
+- Services: `agent.revoke_all`, `models.hf_search`, `models.hf_details`, `models.hf_install`, `models.hf_cancel` and the `models.download` event; `agent.state` carries `allow_all`.
+
+### Changed
+
+- Docs: Mouser writes its messages as MessagePack maps keyed by field name, so a plugin built against an older mode-api skips fields added since; decoders should accept both shapes.
+
 ## [0.2.0] - 2026-11-05
 
 ### Added
