@@ -132,6 +132,11 @@ when the wire format breaks, separately from the crate's version; additions
 that old plugins can ignore (new events, optional fields) keep it. Plugins can
 add or drop listeners later with `Subscribe` and `Unsubscribe`.
 
+`Accepted.features` (Mouser 1.6+, mouser-mode-api 0.4) lists what this host
+offers beyond the base protocol: `views.1` and `media.1` (§Host views and
+media). It is missing (empty) from older hosts; check it with
+`Accepted::has` before sending anything that needs it.
+
 ## Events
 
 Everything Mouser tells a plugin is an `Event`: a sequence number, a time,
@@ -217,6 +222,23 @@ whose action is `mouser.dock_full` toggles the host's fullscreen for the mode
 panel, like its ⤢ button and `F`. Mouser draws them from 1.5; an older Mouser
 can't read a view that uses them.
 
+### Host views and media (mouser-mode-api 0.4, api 1)
+
+`Hosted(Vec<HostedView>)` registers views and players that Mouser runs for the
+mode: item views (list, grid or carousel, with thumbnails) and media (picture,
+video or sound, inline and fullscreen), each with an `id` and a `rect` in the
+dock or panel. Mouser draws them over the plugin's own panel and takes their
+keys and clicks. It redraws them as they animate or play. It reports back
+through `view.selected`, `view.activated`, `view.layout`, `media.state` and
+`media.ended` (host events; `files.read` is needed to read the files). The
+latest `Hosted` replaces the last; an empty list removes them all. A view
+sent with `offscreen: true` stays registered (its selection, or its player
+playing) without being drawn or taking keys.
+
+Send it only when `Accepted.features` has `views.1` (items) or `media.1`
+(media): it is the last `Out` variant and older hosts can't read it. The
+guide is docs/host-views.md; `examples/plugins/gallery` is a full plugin.
+
 #### Over MCP
 
 The same `menu.open` (with `"keyboard": true`, for the selected item) also
@@ -286,7 +308,7 @@ Measured with the test plugin (`mouser-mode-echo`), 1080p RGBA at 60 fps for
 
 Commander's and chat's players come from the `mouser-media` crate, which
 follows these rules (two slots, skip rather than queue); see
-[Building a mode §Views and media](https://github.com/WeirdBrains/mouser/blob/main/docs/building-modes.md#views-and-media).
+[Building a mode §Views and media](./building-modes.md#views-and-media).
 
 A key press takes 8 µs (Linux), 26 µs (Windows) or 5 µs (macOS) to reach the
 plugin and come back. Run the benchmark with
@@ -320,4 +342,4 @@ trying. The plugin stays off, and the status bar shows it with a restart
 button, which starts the count again. Set it with `plugins.max_restarts` in preferences. Your shells keep running throughout,
 because they live in the session server, not in the plugin.
 
-See also: [Modes](https://github.com/WeirdBrains/mouser/blob/main/docs/modes.md), [Plugins](https://github.com/WeirdBrains/mouser/blob/main/docs/plugins.md).
+See also: [Modes](./modes.md), [Plugins](./plugins.md).

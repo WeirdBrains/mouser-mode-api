@@ -8,7 +8,7 @@ Part of [Mouser](https://github.com/WeirdBrains/mouser), the terminal emulator. 
 
 ```toml
 [dependencies]
-mouser-mode-api = "0.3"
+mouser-mode-api = "0.4"
 ```
 
 ## Build

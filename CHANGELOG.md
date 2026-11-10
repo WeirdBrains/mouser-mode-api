@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-10
+
+### Added
+
+- Host views and media: `Out::Hosted(Vec<HostedView>)` (`Host::hosted` from `serve()`) registers item views (list, grid or carousel with thumbnails) and media players (picture, video, sound; inline and fullscreen) that Mouser draws, plays and drives for the mode, reporting back through `view.*` and `media.*` events. `HostedView.offscreen` keeps a view registered without drawing it. Mouser runs them from 1.6.
+- `Accepted.features` and `Accepted::has` (`FEATURE_VIEWS` = `views.1`, `FEATURE_MEDIA` = `media.1`): what the host offers; empty from older hosts, so a mode checks before sending `Hosted`. `host::Spec.features` sets it on the host side.
+
+### Compatibility
+
+- API stays 1. `Hosted` is the last `Out` variant and `features` defaults to empty, so plugins built on 0.3 and older hosts keep working.
+
 ## [0.3.0] - 2026-11-10
 
 ### Added
